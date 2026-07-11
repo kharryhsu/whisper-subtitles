@@ -92,7 +92,7 @@ whisper-subtitles/
 ├── .gitignore
 ├── .python-version         # pins Python 3.11 for pyenv/asdf/etc.
 ├── pyproject.toml
-├── requirements.txt         # exact locked dependency versions
+├── requirements-lock.txt         # exact locked dependency versions
 ├── LICENSE
 └── README.md
 ```

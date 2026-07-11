@@ -5,16 +5,11 @@ Optimized for local GPU inference (e.g. NVIDIA RTX 4060) via CTranslate2.
 """
 
 from __future__ import annotations
-
 import argparse
 import sys
 from pathlib import Path
 from opencc import OpenCC
-
-cc = OpenCC("s2t")  # Simplified -> Traditional
-
 from faster_whisper import WhisperModel
-
 
 def format_timestamp(seconds: float) -> str:
     """Convert seconds (float) to an SRT timestamp: HH:MM:SS,mmm"""
