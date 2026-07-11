@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whisper-subtitles"
+version = "0.1.0"
+description = "Generate .srt subtitles from audio/video using faster-whisper, tuned for local GPU inference."
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "Ratchanon Hsu" }
+]
+keywords = ["whisper", "faster-whisper", "subtitles", "srt", "transcription", "gpu"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+    "faster-whisper>=1.0.0",
+]
+
+[project.urls]
+Repository = "https://github.com/kharryhsu/whisper-subtitles"
+
+[project.scripts]
+whisper-subtitles = "whisper_subtitles.transcribe:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
