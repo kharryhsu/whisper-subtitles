@@ -1,4 +1,4 @@
-﻿
+
 anyio==4.14.1
 av==18.0.0
 certifi==2026.6.17
@@ -17,11 +17,11 @@ huggingface_hub==1.23.0
 idna==3.18
 numpy==2.4.6
 onnxruntime==1.27.0
+opencc-python-reimplemented==0.1.7
 packaging==26.2
 protobuf==7.35.1
 PyYAML==6.0.3
 tokenizers==0.23.1
 tqdm==4.68.4
 typing_extensions==4.16.0
-
 

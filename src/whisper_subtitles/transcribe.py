@@ -9,6 +9,9 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from opencc import OpenCC
+
+cc = OpenCC("s2t")  # Simplified -> Traditional
 
 from faster_whisper import WhisperModel
 
@@ -33,10 +36,12 @@ def transcribe_to_srt(
     language: str | None = None,
     beam_size: int = 5,
     vad_filter: bool = True,
+    traditional_chinese: bool = False,
 ) -> None:
     """Transcribe an audio/video file and write the result as an .srt file."""
     print(f"Loading model '{model_size}' on {device} ({compute_type})...")
     model = WhisperModel(model_size, device=device, compute_type=compute_type)
+    converter = OpenCC("s2twp") if traditional_chinese else None
 
     print(f"Transcribing: {input_path}")
     segments, info = model.transcribe(
@@ -56,6 +61,8 @@ def transcribe_to_srt(
         count = 0
         for i, segment in enumerate(segments, start=1):
             text = segment.text.strip()
+            if converter:
+                text = converter.convert(text)
             if not text:
                 continue
             f.write(f"{i}\n")
@@ -105,6 +112,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-vad", action="store_true",
         help="Disable voice activity detection filtering",
     )
+    parser.add_argument(
+        "--traditional-chinese",
+        action="store_true",
+        help="Convert Chinese output to Traditional Chinese (Taiwan)"
+    )
     return parser
 
 
@@ -127,6 +139,7 @@ def main() -> None:
         language=args.language,
         beam_size=args.beam_size,
         vad_filter=not args.no_vad,
+        traditional_chinese=args.traditional_chinese,
     )
 
 

@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "faster-whisper>=1.0.0",
+    "opencc-python-reimplemented>=0.1.7",
 ]
 
 [project.urls]
