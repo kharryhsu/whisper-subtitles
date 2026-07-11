@@ -219,6 +219,7 @@ __marimo__/
 
 # Model cache
 models/
+nllb-*-ct2/
 *.bin
 
 # Media inputs and generated outputs

@@ -29,6 +29,7 @@ Repository = "https://github.com/kharryhsu/whisper-subtitles"
 
 [project.scripts]
 whisper-subtitles = "whisper_subtitles.transcribe:main"
+whisper-subtitles-translate = "whisper_subtitles.translate:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
