@@ -11,6 +11,7 @@ from pathlib import Path
 from opencc import OpenCC
 from faster_whisper import WhisperModel
 
+
 def format_timestamp(seconds: float) -> str:
     """Convert seconds (float) to an SRT timestamp: HH:MM:SS,mmm"""
     if seconds < 0:
@@ -20,6 +21,45 @@ def format_timestamp(seconds: float) -> str:
     minutes, remainder_ms = divmod(remainder_ms, 60_000)
     secs, ms = divmod(remainder_ms, 1000)
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
+
+
+def split_into_chunks(words, max_duration: float, max_chars: int):
+    """
+    Split a list of word objects (with .start, .end, .word) into smaller
+    chunks, each capped by max_duration (seconds) and max_chars (characters).
+    Returns a list of (start, end, text) tuples.
+    """
+    chunks = []
+    cur_words = []
+    cur_start = None
+
+    def flush():
+        if not cur_words:
+            return
+        start = cur_words[0].start
+        end = cur_words[-1].end
+        text = "".join(w.word for w in cur_words).strip()
+        if text:
+            chunks.append((start, end, text))
+
+    for w in words:
+        if cur_start is None:
+            cur_start = w.start
+
+        candidate_text = "".join(x.word for x in cur_words) + w.word
+        candidate_duration = w.end - cur_start
+
+        if cur_words and (
+            candidate_duration > max_duration or len(candidate_text.strip()) > max_chars
+        ):
+            flush()
+            cur_words = [w]
+            cur_start = w.start
+        else:
+            cur_words.append(w)
+
+    flush()
+    return chunks
 
 
 def transcribe_to_srt(
@@ -32,6 +72,8 @@ def transcribe_to_srt(
     beam_size: int = 5,
     vad_filter: bool = True,
     traditional_chinese: bool = False,
+    max_duration: float = 6.0,
+    max_chars: int = 35,
 ) -> None:
     """Transcribe an audio/video file and write the result as an .srt file."""
     print(f"Loading model '{model_size}' on {device} ({compute_type})...")
@@ -44,6 +86,7 @@ def transcribe_to_srt(
         beam_size=beam_size,
         language=language,
         vad_filter=vad_filter,
+        word_timestamps=True,
     )
 
     print(
@@ -54,19 +97,35 @@ def transcribe_to_srt(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
         count = 0
-        for i, segment in enumerate(segments, start=1):
-            text = segment.text.strip()
-            if converter:
-                text = converter.convert(text)
-            if not text:
+        for segment in segments:
+            words = segment.words or []
+            if not words:
+                text = segment.text.strip()
+                if converter:
+                    text = converter.convert(text)
+                if not text:
+                    continue
+                count += 1
+                f.write(f"{count}\n")
+                f.write(
+                    f"{format_timestamp(segment.start)} --> "
+                    f"{format_timestamp(segment.end)}\n"
+                )
+                f.write(text + "\n\n")
                 continue
-            f.write(f"{i}\n")
-            f.write(
-                f"{format_timestamp(segment.start)} --> "
-                f"{format_timestamp(segment.end)}\n"
-            )
-            f.write(text + "\n\n")
-            count += 1
+
+            for start, end, text in split_into_chunks(words, max_duration, max_chars):
+                if converter:
+                    text = converter.convert(text)
+                if not text:
+                    continue
+                count += 1
+                f.write(f"{count}\n")
+                f.write(
+                    f"{format_timestamp(start)} --> "
+                    f"{format_timestamp(end)}\n"
+                )
+                f.write(text + "\n\n")
 
     print(f"Wrote {count} subtitle segments to: {output_path}")
 
@@ -112,6 +171,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Convert Chinese output to Traditional Chinese (Taiwan)"
     )
+    parser.add_argument(
+        "--max-duration", type=float, default=6.0,
+        help="Max seconds per subtitle chunk (default: 6.0)",
+    )
+    parser.add_argument(
+        "--max-chars", type=int, default=35,
+        help="Max characters per subtitle chunk (default: 35)",
+    )
     return parser
 
 
@@ -135,6 +202,8 @@ def main() -> None:
         beam_size=args.beam_size,
         vad_filter=not args.no_vad,
         traditional_chinese=args.traditional_chinese,
+        max_duration=args.max_duration,
+        max_chars=args.max_chars,
     )
 
 
