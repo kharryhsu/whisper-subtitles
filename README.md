@@ -55,12 +55,22 @@ whisper-subtitles video.mp4 -m medium
 # Force a language instead of auto-detecting
 whisper-subtitles video.mp4 --language th
 
-# Lower VRAM usage via int8 quantization
-whisper-subtitles video.mp4 --compute-type int8_float16
+# Full float16 (more VRAM, use if you have >8GB headroom)
+whisper-subtitles video.mp4 --compute-type float16
 
 # CPU-only (no CUDA GPU available)
 whisper-subtitles video.mp4 --device cpu --compute-type int8
 ```
+
+### Mixed-language audio
+
+The defaults are already tuned for this case:
+
+- `--language` is left unset so the model auto-detects language per chunk instead of committing to one language for the whole file.
+- `--vad-min-silence-ms` defaults to `300`, which splits on pauses more often, giving the model more chances to re-detect language when it switches mid-video.
+- `condition_on_previous_text` is off by default, since otherwise the model biases toward repeating the previous segment's language even after the speaker switches.
+
+If a whole segment still comes out in the wrong language, try lowering `--vad-min-silence-ms` further (e.g. `200`) to force smaller segments.
 
 Run `whisper-subtitles --help` for the full option list.
 
@@ -74,7 +84,7 @@ Run `whisper-subtitles --help` for the full option list.
 | `large-v3`        | slower        | ~10 GB                   | Best accuracy (default)         |
 | `distil-large-v3` | faster        | ~6 GB                    | Near large-v3 accuracy, lighter |
 
-An RTX 4060 (8 GB) comfortably runs `medium` or `distil-large-v3` in `float16`; for `large-v3`, use `--compute-type int8_float16` to fit in 8 GB VRAM.
+An RTX 4060 (8 GB) comfortably runs `medium` or `distil-large-v3` in `float16`; `large-v3` needs `--compute-type int8_float16` (the default) to fit in 8 GB VRAM.
 
 ## Example output
 

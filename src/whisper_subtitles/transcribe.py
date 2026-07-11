@@ -67,10 +67,12 @@ def transcribe_to_srt(
     output_path: Path,
     model_size: str = "large-v3",
     device: str = "cuda",
-    compute_type: str = "float16",
+    compute_type: str = "int8_float16",
     language: str | None = None,
     beam_size: int = 5,
     vad_filter: bool = True,
+    vad_min_silence_ms: int = 300,
+    condition_on_previous_text: bool = False,
     traditional_chinese: bool = False,
     max_duration: float = 6.0,
     max_chars: int = 35,
@@ -86,6 +88,8 @@ def transcribe_to_srt(
         beam_size=beam_size,
         language=language,
         vad_filter=vad_filter,
+        vad_parameters=dict(min_silence_duration_ms=vad_min_silence_ms) if vad_filter else None,
+        condition_on_previous_text=condition_on_previous_text,
         word_timestamps=True,
     )
 
@@ -150,14 +154,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Inference device (default: cuda)",
     )
     parser.add_argument(
-        "--compute-type", default="float16",
+        "--compute-type", default="int8_float16",
         help="CTranslate2 compute type, e.g. float16, int8_float16, int8 "
-             "(default: float16; use int8 on lower-VRAM GPUs or CPU)",
+             "(default: int8_float16, fits large-v3 in ~8GB VRAM cards like the "
+             "4060; use plain float16 if you have more VRAM headroom)",
     )
     parser.add_argument(
         "--language", default=None,
         help="Force source language (e.g. 'th', 'zh', 'en'). "
-             "Default: auto-detect.",
+             "Default: auto-detect per chunk, recommended for mixed-language audio.",
     )
     parser.add_argument(
         "--beam-size", type=int, default=5, help="Beam search size (default: 5)"
@@ -165,6 +170,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-vad", action="store_true",
         help="Disable voice activity detection filtering",
+    )
+    parser.add_argument(
+        "--vad-min-silence-ms", type=int, default=300,
+        help="Minimum silence (ms) to split a VAD segment (default: 300). "
+             "Lower values create more, shorter segments, which helps language "
+             "re-detection on mixed-language audio.",
+    )
+    parser.add_argument(
+        "--condition-on-previous-text", action="store_true",
+        help="Bias decoding on previous segment's text (default: off). "
+             "Keep this off for mixed-language audio, since it otherwise biases "
+             "toward repeating the previous segment's language after a switch.",
     )
     parser.add_argument(
         "--traditional-chinese",
@@ -201,6 +218,8 @@ def main() -> None:
         language=args.language,
         beam_size=args.beam_size,
         vad_filter=not args.no_vad,
+        vad_min_silence_ms=args.vad_min_silence_ms,
+        condition_on_previous_text=args.condition_on_previous_text,
         traditional_chinese=args.traditional_chinese,
         max_duration=args.max_duration,
         max_chars=args.max_chars,
