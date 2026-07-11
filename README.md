@@ -42,6 +42,16 @@ Stage 2 (translation) needs a couple of extra packages not required for transcri
 pip install ctranslate2 transformers sentencepiece
 ```
 
+### Regenerating `requirements-lock.txt`
+
+After installing or updating packages in your venv, regenerate the lock file with:
+
+```powershell
+pip freeze | Select-String -NotMatch "whisper-subtitles" | Out-File -Encoding utf8 requirements-lock.txt
+```
+
+The `Select-String -NotMatch` filter excludes this project's own editable install line, so the lock file only contains third-party dependencies.
+
 ## Usage
 
 ### Stage 1: Transcribe
@@ -72,6 +82,15 @@ whisper-subtitles video.mp4 --compute-type float16
 
 # CPU-only (no CUDA GPU available)
 whisper-subtitles video.mp4 --device cpu --compute-type int8
+
+# Bias recognition toward known names/jargon/numbers (applied throughout, not just the first segment)
+whisper-subtitles video.mp4 --hotwords "One, Two, Three"
+
+# Prime the model with topic/style context (mainly affects the first ~30s unless --condition-on-previous-text is also set)
+whisper-subtitles video.mp4 --initial-prompt "Lecture on numbers, Thai and Chinese mixed"
+
+# Raise the per-window decode budget past Whisper's default 448 tokens, for segments with unusually dense speech
+whisper-subtitles video.mp4 --max-new-tokens 600
 ```
 
 > On an RTX 4060 (8 GB), `--compute-type float16` with `large-v3` fits fine in practice despite the ~10 GB nominal figure below — actual usage depends on what else is holding VRAM. `int8_float16` remains the safe default if you hit an out-of-memory error.
@@ -95,6 +114,7 @@ Run `whisper-subtitles --help` for the full option list.
 | `tiny` / `base`   | fastest       | ~1 GB                    | Draft quality                   |
 | `small`           | fast          | ~2 GB                    | Decent for clean audio          |
 | `medium`          | moderate      | ~5 GB                    | Good balance                    |
+| `large-v2`        | slower        | ~10 GB (nominal)         | Occasional fallback if `large-v3` hallucinates on quiet/silent segments |
 | `large-v3`        | slower        | ~10 GB (nominal)         | Best accuracy (default)         |
 | `distil-large-v3` | faster        | ~6 GB                    | Near large-v3 accuracy, lighter |
 

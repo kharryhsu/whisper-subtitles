@@ -76,6 +76,9 @@ def transcribe_to_srt(
     traditional_chinese: bool = False,
     max_duration: float = 6.0,
     max_chars: int = 35,
+    initial_prompt: str | None = None,
+    hotwords: str | None = None,
+    max_new_tokens: int | None = None,
 ) -> None:
     """Transcribe an audio/video file and write the result as an .srt file."""
     print(f"Loading model '{model_size}' on {device} ({compute_type})...")
@@ -91,6 +94,9 @@ def transcribe_to_srt(
         vad_parameters=dict(min_silence_duration_ms=vad_min_silence_ms) if vad_filter else None,
         condition_on_previous_text=condition_on_previous_text,
         word_timestamps=True,
+        initial_prompt=initial_prompt,
+        hotwords=hotwords,
+        max_new_tokens=max_new_tokens,
     )
 
     print(
@@ -196,6 +202,20 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-chars", type=int, default=35,
         help="Max characters per subtitle chunk (default: 35)",
     )
+    parser.add_argument(
+        "--initial-prompt", default=None,
+        help="Full-text primer (topic, names, style). Mainly affects the first "
+             "~30s unless --condition-on-previous-text is also set.",
+    )
+    parser.add_argument(
+        "--hotwords", default=None,
+        help="Comma/space-separated vocabulary to bias recognition toward "
+             "(names, jargon, numbers). Applied throughout, not just the first segment.",
+    )
+    parser.add_argument(
+        "--max-new-tokens", type=int, default=None,
+        help="Max tokens per decode window (default: model's own max_length, 448 for Whisper)",
+    )
     return parser
 
 
@@ -223,6 +243,9 @@ def main() -> None:
         traditional_chinese=args.traditional_chinese,
         max_duration=args.max_duration,
         max_chars=args.max_chars,
+        initial_prompt=args.initial_prompt,
+        hotwords=args.hotwords,
+        max_new_tokens=args.max_new_tokens,
     )
 
 

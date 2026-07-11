@@ -20,8 +20,15 @@ classifiers = [
     "Topic :: Multimedia :: Sound/Audio :: Speech",
 ]
 dependencies = [
-    "faster-whisper>=1.0.0",
-    "opencc-python-reimplemented>=0.1.7",
+    "faster-whisper",
+    "opencc-python-reimplemented",
+]
+
+[project.optional-dependencies]
+translate = [
+    "ctranslate2",
+    "transformers",
+    "sentencepiece",
 ]
 
 [project.urls]
