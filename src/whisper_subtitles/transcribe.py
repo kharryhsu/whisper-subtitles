@@ -62,6 +62,29 @@ def split_into_chunks(words, max_duration: float, max_chars: int):
     return chunks
 
 
+def normalize_thai(text: str) -> str:
+    """Fix decomposed SARA AM (นิคหิต+อา) back to the correct single ำ."""
+    return text.replace("\u0e4d\u0e32", "\u0e33")
+
+
+def merge_combining_fragments(words):
+    """Glue word-timestamp fragments that start with a Thai combining
+    mark onto the previous fragment, so chunking never splits them."""
+    THAI_COMBINING = set(
+        "\u0e31\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e3a"
+        "\u0e47\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e4d\u0e4e"
+    )
+    merged = []
+    for w in words:
+        if merged and w.word and w.word[0] in THAI_COMBINING:
+            prev = merged[-1]
+            prev.word = prev.word + w.word
+            prev.end = w.end
+        else:
+            merged.append(w)
+    return merged
+
+
 def transcribe_to_srt(
     input_path: Path,
     output_path: Path,
@@ -108,9 +131,10 @@ def transcribe_to_srt(
     with output_path.open("w", encoding="utf-8") as f:
         count = 0
         for segment in segments:
-            words = segment.words or []
+            words = merge_combining_fragments(segment.words or [])
             if not words:
                 text = segment.text.strip()
+                text = normalize_thai(text)
                 if converter:
                     text = converter.convert(text)
                 if not text:
@@ -125,6 +149,7 @@ def transcribe_to_srt(
                 continue
 
             for start, end, text in split_into_chunks(words, max_duration, max_chars):
+                text = normalize_thai(text)
                 if converter:
                     text = converter.convert(text)
                 if not text:
